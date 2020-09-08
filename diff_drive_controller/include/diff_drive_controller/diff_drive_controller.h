@@ -130,6 +130,7 @@ namespace diff_drive_controller{
     boost::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry> > odom_pub_;
     boost::shared_ptr<realtime_tools::RealtimePublisher<tf::tfMessage> > tf_odom_pub_;
     Odometry odometry_;
+    bool estimate_velocity_from_position_;
 
     /// Wheel separation, wrt the midpoint of the wheel width:
     double wheel_separation_;
@@ -156,6 +157,7 @@ namespace diff_drive_controller{
 
     /// Whether to publish odometry to tf or not:
     bool enable_odom_tf_;
+    bool estimate_position_from_velocity_;
 
     /// Number of wheel joints:
     size_t wheel_joints_size_;

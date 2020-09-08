@@ -87,6 +87,15 @@ namespace diff_drive_controller
     bool update(double left_pos, double right_pos, const ros::Time &time);
 
     /**
+     * \brief Updates the odometry class with latest wheel velocities
+     * \param left_vel  Left  wheel vel [rad/s]
+     * \param right_vel Right wheel vel [rad/s]
+     * \param time      Current time
+     * \return true if the odometry is actually updated
+     */
+    bool updateVelocities(double left_vel, double right_vel, const ros::Time &time);
+
+    /**
      * \brief Updates the odometry class with latest velocity command
      * \param linear  Linear velocity [m/s]
      * \param angular Angular velocity [rad/s]

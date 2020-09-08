@@ -151,6 +151,7 @@ namespace diff_drive_controller{
 
   DiffDriveController::DiffDriveController()
     : open_loop_(false)
+    , estimate_position_from_velocity_(true)
     , command_struct_()
     , wheel_separation_(0.0)
     , wheel_radius_(0.0)
@@ -206,6 +207,9 @@ namespace diff_drive_controller{
     publish_period_ = ros::Duration(1.0 / publish_rate);
 
     controller_nh.param("open_loop", open_loop_, open_loop_);
+    controller_nh.param("estimate_position_from_velocity", estimate_position_from_velocity_, estimate_position_from_velocity_);
+    ROS_INFO_STREAM_COND_NAMED(estimate_position_from_velocity_, name_, "Velocity will be estimated from position.");
+    ROS_INFO_STREAM_COND_NAMED(!estimate_position_from_velocity_, name_, "Velocity will not be estimated from position.");
 
     controller_nh.param("wheel_separation_multiplier", wheel_separation_multiplier_, wheel_separation_multiplier_);
     ROS_INFO_STREAM_NAMED(name_, "Wheel separation will be multiplied by "
@@ -366,7 +370,7 @@ namespace diff_drive_controller{
     {
       odometry_.updateOpenLoop(last0_cmd_.lin, last0_cmd_.ang, time);
     }
-    else
+    else if (!estimate_position_from_velocity_)
     {
       double left_pos  = 0.0;
       double right_pos = 0.0;
@@ -385,6 +389,26 @@ namespace diff_drive_controller{
 
       // Estimate linear and angular velocity using joint information
       odometry_.update(left_pos, right_pos, time);
+    }
+    else 
+    {
+      double left_vel  = 0.0;
+      double right_vel = 0.0;
+      for (size_t i = 0; i < wheel_joints_size_; ++i)
+      {
+        const double lv = left_wheel_joints_[i].getVelocity();
+        const double rv = right_wheel_joints_[i].getVelocity();
+        if (std::isnan(lv) || std::isnan(rv))
+          return;
+
+        left_vel  += lv;
+        right_vel += rv;
+      }
+      left_vel  /= wheel_joints_size_;
+      right_vel /= wheel_joints_size_;
+
+      // Estimate linear and angular velocity using joint information
+      odometry_.updateVelocities(left_vel, right_vel, time);
     }
 
     // Publish odometry message

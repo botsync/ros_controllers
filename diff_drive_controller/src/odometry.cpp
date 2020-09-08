@@ -111,6 +111,44 @@ namespace diff_drive_controller
     return true;
   }
 
+  bool Odometry::updateVelocities(double left_vel, double right_vel, const ros::Time &time)
+  {
+    /// Get current wheel joint positions:
+    const double left_wheel_cur_vel  = left_vel  * left_wheel_radius_;
+    const double right_wheel_cur_vel = right_vel * right_wheel_radius_;
+
+    /// Estimate velocity of wheels using old and current position:
+    const double dt = (time - timestamp_).toSec();
+    const double left_wheel_est_position_change  = left_wheel_cur_vel * dt;
+    const double right_wheel_est_position_change = right_wheel_cur_vel * dt;
+
+    /// Compute linear and angular diff:
+    const double linear_position_update  = (right_wheel_est_position_change + left_wheel_est_position_change) * 0.5 ;
+    const double angular_position_update = (right_wheel_est_position_change - left_wheel_est_position_change) / wheel_separation_;
+
+    /// Integrate odometry:
+    integrate_fun_(linear_position_update, angular_position_update);
+
+    /// We cannot estimate the speed with very small time intervals:
+    // const double dt = (time - timestamp_).toSec();
+    if (dt < 0.0001)
+      return false; // Interval too small to integrate with
+
+    timestamp_ = time;
+
+    /// Estimate speeds using a rolling mean to filter them out: 
+
+    const double linear_v = (left_wheel_cur_vel + right_wheel_cur_vel) * 0.5;
+    const double angular_v = (right_wheel_cur_vel -left_wheel_cur_vel) / wheel_separation_;
+    linear_acc_(linear_v);
+    angular_acc_(angular_v);
+
+    linear_ = bacc::rolling_mean(linear_acc_);
+    angular_ = bacc::rolling_mean(angular_acc_);
+
+    return true;
+  }
+
   void Odometry::updateOpenLoop(double linear, double angular, const ros::Time &time)
   {
     /// Save last linear and angular velocity:
